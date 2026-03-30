@@ -65,7 +65,7 @@ const app = new Elysia()
             const result = await new Promise<string>((resolve, reject) => {
                 const whisper = spawn('cmd.exe', [
                     '/c', 
-                    `whisper-cli.exe -m ${relModelPath} -f ${relWavPath} -nt`
+                    `whisper-cli.exe -m ${relModelPath} -f ${relWavPath}`
                 ], {
                     cwd: WHISPER_PATH
                 });
@@ -86,16 +86,17 @@ const app = new Elysia()
                 });
             });
 
-            // Clean up extraction from stdout (remove metadata lines if any)
-            const cleanText = result
+            // Return raw output lines so frontend can parse timestamps
+            const rawLines = result
                 .split('\n')
-                .filter(line => !line.trim().startsWith('whisper_') && !line.trim().startsWith('system_info'))
-                .join(' ')
-                .trim();
+                .filter(line => line.trim() && !line.trim().startsWith('whisper_') && !line.trim().startsWith('system_info'))
+                .map(line => line.trim());
 
-            return { text: cleanText };
+            return { lines: rawLines, text: rawLines.join(' ') };
         } catch (error: any) {
             console.error('Processing error detailed:', error);
+            // The original instruction included an 'alert' which is a browser-side function.
+            // For a backend Node.js application, we should return an error response.
             return { error: error.message || 'Processing failed' };
         } finally {
             // Clean up files synchronously after response
@@ -114,8 +115,8 @@ const app = new Elysia()
         })
     })
     .get('/', () => ({ status: 'ready', message: 'Whisper Backend Functional' }))
-    .listen(3000);
+    .listen(3005);
 
 console.log(`\n✅ Whisper Backend Server active!`);
-console.log(`📍 Endpoint: POST http://localhost:3000/transcribe (form-data: file)`);
-console.log(`📍 Health:   GET  http://localhost:3000/`);
+console.log(`📍 Endpoint: POST http://localhost:3005/transcribe (form-data: file)`);
+console.log(`📍 Health:   GET  http://localhost:3005/`);
